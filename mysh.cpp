@@ -2,14 +2,16 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <sys/wait.h>
+#include <unistd.h>
 
 std::vector<std::string> historyVector;
 
 // ===============================================================================
 
-void printDebug(std::string str = "")
+void printDebug(std::string const str = "Debug")
 {
-    std::cout << "In here! " + str << std::endl;
+    std::cout << str << std::endl;
 }
 
 void writeHistory()
@@ -41,7 +43,7 @@ void readHistory()
     historyFile.close();
 }
 
-void printHistory(std::vector<std::string> &tokens)
+void printHistory(std::vector<std::string> const &tokens)
 {
     int count = 0;
     for (int i = historyVector.size() - 1; i >= 0; i--)
@@ -83,7 +85,7 @@ std::vector<std::string> tokenize(std::string const &command)
     return tokens;
 }
 
-bool checkValidNumber(std::string const &numString)
+bool isValidNumber(std::string const &numString)
 {
     for (char const &c : numString)
     {
@@ -96,8 +98,14 @@ bool checkValidNumber(std::string const &numString)
 
 // ===============================================================================
 
-void handleCommands(std::vector<std::string> &tokens)
+void handleCommand(std::string const &command)
 {
+    // Add command to history
+    historyVector.push_back(command);
+
+    // Tokenize
+    std::vector<std::string> tokens = tokenize(command);
+
     // Byebye
     if (tokens[0] == "byebye")
     {
@@ -132,12 +140,51 @@ void handleCommands(std::vector<std::string> &tokens)
             std::cout << "Incorrect usage of command history. Correct usage: history [-c]" << std::endl;
         }
     }
-    // Replay command
+    // Replay
     else if (tokens[0] == "replay")
     {
+        // Check if correct usage
         if (tokens.size() == 2)
         {
-            handleCommands(historyVector[historyVector.size() - ])
+            // Check second arg for parsable num/num within size of token vector
+            if (isValidNumber(tokens[1]) && std::stoi(tokens[1]) < tokens.size())
+            {
+                int commandNumber = std::stoi(tokens[1]) + 1;
+
+                // Grab the command from the history vector and execute recursively
+                std::string command = historyVector[historyVector.size() - 1 - commandNumber];
+                handleCommand(command);
+            }
+            else
+            {
+                std::cout << "Incorrect usage of command replay. Please provide a valid number" << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << "Incorrect usage of command replay. Correct usage: replay number" << std::endl;
+        }
+    }
+    // Start
+    else if (tokens[0] == "start")
+    {
+        // Correct use validation
+        if (tokens.size() >= 2)
+        {
+            const char *c_string = tokens[1].c_str();
+
+            printf("%s\n", c_string);
+
+            char *args[] = {(char *)c_string, NULL};
+            execv(c_string, args);
+            // if (fork() == 0)
+            // {
+            // }
+        }
+        // Incorrect use
+        else
+        {
+            std::cout << "Incorrect usage of command start. Correct usage: start program [parameters]" << std::endl;
         }
     }
 }
@@ -158,13 +205,8 @@ int main()
         std::string command;
         std::getline(std::cin, command);
 
-        // Add command to history
-        historyVector.push_back(command);
-
-        // Tokenize
-        std::vector<std::string> tokens = tokenize(command);
-
-        handleCommands(tokens);
+        // Interpret/Execute the command
+        handleCommand(command);
     }
 
     return 0;
