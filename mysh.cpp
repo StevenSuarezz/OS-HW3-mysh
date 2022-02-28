@@ -115,7 +115,7 @@ char **vectorTo2dCharArray(std::vector<std::string> const &tokens)
 void free2dCharArray(char **arr, int const &size)
 {
     // Free args array memory
-    for (int i = 0; i < size + 1; i++)
+    for (int i = 0; i < size; i++)
     {
         free(arr[i]);
         arr[i] = NULL;
@@ -200,9 +200,32 @@ void handleCommand(std::string const &command)
         // Correct use validation
         if (tokens.size() >= 2)
         {
-            const char *command = tokens[1].c_str();
             char **args = vectorTo2dCharArray(tokens);
-            execv(command, args);
+
+            pid_t pid = fork();
+
+            if (pid == -1)
+            {
+                // Fork error
+                perror("fork");
+            }
+            else if (pid == 0)
+            {
+                // Child process
+                if (execv(args[0], args) == -1)
+                {
+                    perror("exec");
+                }
+            }
+            else
+            {
+                // Parent process
+                int status;
+                if (waitpid(pid, &status, 0) == -1)
+                {
+                    perror("wait");
+                }
+            }
 
             free2dCharArray(args, tokens.size());
         }
