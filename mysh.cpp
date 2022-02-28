@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -16,8 +17,8 @@ void printDebug(std::string const str = "Debug")
 
 void writeHistory()
 {
-    // Create/open history file
-    std::ofstream historyFile("mysh.history");
+    // Create/open history file, ensure any contents previously in file are wiped
+    std::ofstream historyFile("mysh.history", std::ofstream::out | std::ofstream::trunc);
 
     // Loop through history vector and write each command to file
     for (int i = 0; i < historyVector.size(); i++)
@@ -96,6 +97,34 @@ bool isValidNumber(std::string const &numString)
     return true;
 }
 
+char **vectorTo2dCharArray(std::vector<std::string> const &tokens)
+{
+    char **args = (char **)malloc(sizeof(char *) * tokens.size());
+
+    for (int i = 0; i < tokens.size() - 1; i++)
+    {
+        args[i] = (char *)malloc(sizeof(char) * (tokens[i + 1].length() + 1));
+        strcpy(args[i], tokens[i + 1].c_str());
+    }
+
+    args[tokens.size() - 1] = NULL;
+
+    return args;
+}
+
+void free2dCharArray(char **arr, int const &size)
+{
+    // Free args array memory
+    for (int i = 0; i < size + 1; i++)
+    {
+        free(arr[i]);
+        arr[i] = NULL;
+    }
+
+    free(arr);
+    arr = NULL;
+}
+
 // ===============================================================================
 
 void handleCommand(std::string const &command)
@@ -171,15 +200,11 @@ void handleCommand(std::string const &command)
         // Correct use validation
         if (tokens.size() >= 2)
         {
-            const char *c_string = tokens[1].c_str();
+            const char *command = tokens[1].c_str();
+            char **args = vectorTo2dCharArray(tokens);
+            execv(command, args);
 
-            printf("%s\n", c_string);
-
-            char *args[] = {(char *)c_string, NULL};
-            execv(c_string, args);
-            // if (fork() == 0)
-            // {
-            // }
+            free2dCharArray(args, tokens.size());
         }
         // Incorrect use
         else
