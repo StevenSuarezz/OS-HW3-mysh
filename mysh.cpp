@@ -1,3 +1,6 @@
+// Steven Suarez
+// COP4600 - Operating Systems
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -99,10 +102,13 @@ bool isValidNumber(std::string const &numString)
 
 char **vectorTo2dCharArray(std::vector<std::string> const &tokens)
 {
+    // Malloc array to store char *
     char **args = (char **)malloc(sizeof(char *) * tokens.size());
 
+    // Loop through args array and malloc at each index
     for (int i = 0; i < tokens.size() - 1; i++)
     {
+        // Index tokens at i+1 to skip the first command
         args[i] = (char *)malloc(sizeof(char) * (tokens[i + 1].length() + 1));
         strcpy(args[i], tokens[i + 1].c_str());
     }
@@ -134,6 +140,13 @@ void handleCommand(std::string const &command)
 
     // Tokenize
     std::vector<std::string> tokens = tokenize(command);
+
+    // No commands entered guard clause
+    if (tokens.size() == 0)
+    {
+        std::cout << "Please enter a valid command" << std::endl;
+        return;
+    }
 
     // Byebye
     if (tokens[0] == "byebye")
@@ -234,6 +247,87 @@ void handleCommand(std::string const &command)
         {
             std::cout << "Incorrect usage of command start. Correct usage: start program [parameters]" << std::endl;
         }
+    }
+    // Background
+    else if (tokens[0] == "background")
+    {
+        // Correct use validation
+        if (tokens.size() >= 2)
+        {
+            char **args = vectorTo2dCharArray(tokens);
+
+            pid_t pid = fork();
+
+            if (pid == -1)
+            {
+                // Fork error
+                perror("fork");
+            }
+            else if (pid == 0)
+            {
+                // Child process]
+
+                pid_t childPid = getpid();
+
+                printDebug("Child PID: " + std::to_string(childPid));
+
+                if (execv(args[0], args) == -1)
+                {
+                    perror("exec");
+                }
+            }
+            else
+            {
+                // Parent process. Wait with WNOHANG flag
+                int status;
+                if (waitpid(pid, &status, WNOHANG) == -1)
+                {
+                    perror("wait");
+                }
+            }
+
+            free2dCharArray(args, tokens.size());
+        }
+        // Incorrect use
+        else
+        {
+            std::cout << "Incorrect usage of command background. Correct usage: background program [parameters]" << std::endl;
+        }
+    }
+    // Terminate
+    else if (tokens[0] == "terminate")
+    {
+        // Check for parameters
+        if (tokens.size() == 2)
+        {
+            // Check if PID argument is a parsable num
+            if (isValidNumber(tokens[1]))
+            {
+                pid_t PID = std::stoi(tokens[1]);
+
+                if (kill(PID, 0) == 0)
+                {
+                    if (kill(PID, SIGKILL) == 0)
+                    {
+                        // Kill zombie process
+                        waitpid(PID, nullptr, 0);
+                        std::cout << "Process " + std::to_string(PID) + " terminated" << std::endl;
+                    }
+                }
+                else
+                {
+                    std::cout << "Invalid PID" << std::endl;
+                }
+            }
+        }
+        else
+        {
+            std::cout << "Incorrect usage of command terminate. Correct usage: terminate PID" << std::endl;
+        }
+    }
+    else
+    {
+        std::cout << "Please enter a valid command" << std::endl;
     }
 }
 
