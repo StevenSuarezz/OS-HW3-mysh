@@ -325,6 +325,15 @@ void handleCommand(std::string const &command)
             std::cout << "Incorrect usage of command terminate. Correct usage: terminate PID" << std::endl;
         }
     }
+    // dwelt
+    else if (tokens[0] == "dwelt")
+    {
+        // Check for parameters
+        if (tokens.size() == 2)
+        {
+            
+        }
+    }
     else
     {
         std::cout << "Please enter a valid command" << std::endl;
